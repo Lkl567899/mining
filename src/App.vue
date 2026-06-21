@@ -41,5 +41,34 @@ initBoard()
 </script>
 
 <template>
-
+  <div class="bg_1" />
+  <div class="bg_2" />
 </template>
+
+<style>
+body {
+  background-image: url(./assets/images/bg/bg0.png);
+}
+
+.bg_1,
+.bg_2 {
+  z-index: -1;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-size: cover;
+  transition: all .3s ease-out;
+}
+
+.bg_1 {
+  background-image: url(./assets/images/bg/bg1.png);
+  background-position: top
+}
+
+.bg_2 {
+  background-image: url(./assets/images/bg/bg2.png);
+  background-position: top
+}
+</style>
