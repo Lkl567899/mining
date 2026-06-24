@@ -6,41 +6,6 @@ const grid = ref<Cell[]>([])
 const BOARD_SIZE = 15; // 一行 15 个格子
 const frequency = ref(0) //地图章节
 
-// 镐头样式
-const pickaxes: PickaxeItem[] = [
-  {
-    name: '铁镐',
-    desc: '一把简单的镐，十分钟就能做出来，但是能成功挖出来的星星矿和宝石并不多！',
-    icon: new URL('./assets/images/pickaxe/0.png', import.meta.url).href
-  },
-  {
-    name: '银稿',
-    desc: '银质的镐，制作需要半小时，挖出来的星星矿和宝石至少比铁镐多！',
-    icon: new URL('./assets/images/pickaxe/1.png', import.meta.url).href
-  },
-  {
-    name: '金稿',
-    desc: '制作工艺非常难的镐，制作需要一小时，金镐能最大程度减少挖掘对星星矿和宝石造成的破坏，所以挖出来的星星矿和宝石的产量非常高！',
-    icon: new URL('./assets/images/pickaxe/2.png', import.meta.url).href
-  },
-  {
-    name: '保罗炸弹',
-    desc: '感受保罗的愤怒吧！能一次性轰开3x3片矿区!',
-    icon: new URL('./assets/images/pickaxe/3.png', import.meta.url).href
-  }
-]
-// 冷却时间
-const cd = ref<cdType[]>([
-  { time: 0, click: true },
-  { time: 0, click: true },
-  { time: 0, click: true },
-  { time: 0, click: true }
-])
-// 镐头高亮
-const pickaxe = ref(0)
-const clickPickaxe = (index: number) => {
-  pickaxe.value = index
-}
 // 随机分发矿石
 const generatePrizes = () => {
   let count = 0 //记录发出去的矿石
@@ -83,31 +48,138 @@ onMounted(() => {
     cols.value = 9
   }
 })
-
+const stars = ref(0) //星星总数
 const score = ref(0) //总分数
+// 镐头样式
+const pickaxes: PickaxeItem[] = [
+  {
+    name: '铁镐',
+    desc: '一把简单的镐，十分钟就能做出来，但是能成功挖出来的星星矿和宝石并不多！',
+    icon: new URL('./assets/images/pickaxe/0.png', import.meta.url).href
+  },
+  {
+    name: '银稿',
+    desc: '银质的镐，制作需要半小时，挖出来的星星矿和宝石至少比铁镐多！',
+    icon: new URL('./assets/images/pickaxe/1.png', import.meta.url).href
+  },
+  {
+    name: '金稿',
+    desc: '制作工艺非常难的镐，制作需要一小时，金镐能最大程度减少挖掘对星星矿和宝石造成的破坏，所以挖出来的星星矿和宝石的产量非常高！',
+    icon: new URL('./assets/images/pickaxe/2.png', import.meta.url).href
+  },
+  {
+    name: '保罗炸弹',
+    desc: '感受保罗的愤怒吧!能一次性轰开3x3片矿区!',
+    icon: new URL('./assets/images/pickaxe/3.png', import.meta.url).href
+  }
+]
+// 镐头高亮
+const pickaxe = ref(0)
+const clickPickaxe = (index: number) => {
+  pickaxe.value = index
+  console.log(pickaxe.value);
+}
+// 镐头冷却时间
+const cd = ref<cdType[]>([
+  { time: 0, click: true },
+  { time: 0, click: true },
+  { time: 0, click: true },
+  { time: 0, click: true }
+])
 // 点击触发
-const handleClick = (item: Cell, index: number) => {
+const handleClick = (item: Cell) => {
   if (item.mined) return //矿已被挖开
-  score.value += item.score
-  item.mined = true
-  let count = 0
-  for (let dRow = -1; dRow <= 1; dRow++) {
-    for (let dCol = -1; dCol <= 1; dCol++) {
-      if (dRow === 0 && dCol === 0) continue
-      let targetRow = item.row + dRow
-      let targetCol = item.col + dCol
-      // 边缘矿石的边界处理
-      if (targetRow >= 0 && targetRow < rows.value && targetCol >= 0 && targetCol < cols.value) {
-        // 循环出当前元素坐标的八个邻居
-        const neighborIndex = targetRow * cols.value + targetCol
-        const neighbor = grid.value[neighborIndex]
-        if (neighbor.type === 'success') {
-          count++
+  if (!cd.value[pickaxe.value].click) return //镐头还在cd
+  const row = item.row
+  const col = item.col
+  switch (pickaxe.value) {
+    // 普通镐
+    case 0:
+      digSingleCell(row, col)
+      break
+    case 1:
+      for (let dCol = -1; dCol <= 1; dCol++) {
+        digSingleCell(row, col + dCol)
+      }
+      break
+    case 2:
+      const crossDirections = [
+        [0, 0],   // 自己
+        [-1, 0],  // 上
+        [1, 0],   // 下
+        [0, -1],  // 左
+        [0, 1]    // 右
+      ]
+      crossDirections.forEach(([dRow, dCol]) => {
+        digSingleCell(row + dRow, col + dCol)
+      })
+      break
+    case 3:
+      for (let dRow = -1; dRow <= 1; dRow++) {
+        for (let dCol = -1; dCol <= 1; dCol++) {
+          digSingleCell(row + dRow, col + dCol)
         }
       }
-    }
+      break
   }
-  item.aroundCount = count
+  // 镐头冷却
+  let timeIncrement
+  switch (pickaxe.value) {
+    case 0:
+      timeIncrement = 10 * 60 * 100
+      break
+    case 1:
+      timeIncrement = 30 * 60 * 100
+      break
+    case 2:
+      timeIncrement = 50 * 60 * 100
+      break
+    default:
+      timeIncrement = 100 * 60 * 100;
+  }
+  cd.value[pickaxe.value].time = Date.now() + timeIncrement
+  cd.value[pickaxe.value].click = false
+}
+
+// 挖矿功能 挖取多个矿石以及探测邻居有无星星矿
+const digSingleCell = (targetRow: number, targetCol: number) => {
+  // 边缘矿石的边界处理
+  if (targetRow >= 0 && targetRow < rows.value && targetCol >= 0 && targetCol < cols.value) {
+    // 循环出当前元素坐标的八个邻居
+    const neighborIndex = targetRow * cols.value + targetCol
+    const neighbor = grid.value[neighborIndex]
+    if (neighbor.mined) return
+    // 1. 结算这个格子的随机得分
+    score.value += neighbor.score
+    neighbor.mined = true
+    // 2. 如果挖到的是星星矿，星星总数 +1
+    if (neighbor.type === 'success') {
+      stars.value += 1
+    }
+    let count = 0
+    // 以当前格子为中心循环探测附近八个邻居是否存在星星矿 存在用数量显示出来
+    for (let dRow = -1; dRow <= 1; dRow++) {
+      for (let dCol = -1; dCol <= 1; dCol++) {
+        if (dRow === 0 && dCol === 0) continue
+        let neighborRow = targetRow + dRow
+        let neighborCol = targetCol + dCol
+        if (neighborRow >= 0 && neighborRow < rows.value && neighborCol >= 0 && neighborCol < cols.value) {
+          const neighborIndex = neighborRow * cols.value + neighborCol
+          if (grid.value[neighborIndex].type === 'success') {
+            count++
+          }
+        }
+      }
+
+    }
+    neighbor.aroundCount = count
+  }
+}
+// 冷却结束的回调
+const onFinish = (index: number) => {
+  console.log('结束了');
+  cd.value[index].click = true
+  cd.value[index].time = 0
 }
 </script>
 <!-- 
@@ -127,14 +199,14 @@ const handleClick = (item: Cell, index: number) => {
   <div class="user">
     <div class="userInfo">
       <img src="./assets/images/avatar.png" class="avatar" alt="">
-      <div class="stars">我 <span class="star">⭐</span> 123</div>
+      <div class="stars">我 <span class="star">⭐</span> {{ stars }}</div>
     </div>
   </div>
   <div class="mining_box">
     <div class="title">Vue 挖矿小游戏</div>
     <div class="statistics"> 当前挖矿分数: {{ score }} | 目前你已挖完矿区0次 </div>
     <div class="card_box">
-      <div class="grid_item" v-for="(item, index) in grid" :key="item.id" @click="handleClick(item, index)">
+      <div class="grid_item" v-for="(item) in grid" :key="item.id" @click="handleClick(item)">
         <div :class="['card_bg', 'open']" v-if="item.mined">
           <a-tooltip>
             <template #title>
@@ -155,6 +227,14 @@ const handleClick = (item: Cell, index: number) => {
   <div class="tool_box">
     <div class="pickaxe_item" v-for="(item, index) in pickaxes" :key="index" @click="clickPickaxe(index)">
       <img :src="item.icon" alt="" :class="['pickaxe_icon', { active: pickaxe === index }]">
+      <div class="card_demining_time_body">
+        <span v-if="!cd[index].click">
+          <a-statistic-countdown :value="cd[index].time" @finish="onFinish(index)" format="mm:ss"
+            style="padding-bottom: 5px;"
+            :value-style="{ fontSize: '12px', height: '100%', display: 'flex', alignItems: 'center' }" />
+        </span>
+        <span v-else class="time-status">完成!</span>
+      </div>
     </div>
   </div>
 </template>
@@ -301,7 +381,10 @@ body {
 
   .pickaxe_item {
     width: 48px;
-    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
 
     .pickaxe_icon {
       margin-top: 10px;
@@ -309,13 +392,29 @@ body {
       height: 32px;
     }
 
+    .card_demining_time_body {
+      height: 20px;
+      font-size: 12px;
+
+      .time-status {
+        height: 100%;
+        display: flex;
+        align-items: center;
+      }
+    }
+
     .active {
       opacity: 1;
     }
+
   }
 
   .pickaxe_item:hover .pickaxe_icon {
     opacity: 1;
   }
+}
+
+.ant-statistic {
+  padding-bottom: 0 !important;
 }
 </style>
