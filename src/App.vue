@@ -1,17 +1,14 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
-import type { Cell, PickaxeItem } from './types/game';
+import type { cdType, Cell, PickaxeItem } from './types/game';
 import { useGame } from './stores/game';
 import { storeToRefs } from 'pinia';
-const BOARD_SIZE = 15; // 一行 15 个格子
-
 // 随机分发矿石
 const generatePrizes = () => {
   let count = 0 //记录发出去的矿石
   while (count < 30) {
     // 随机生成一个 0 到 224 的索引号
-    const randomIndex = Math.floor(Math.random() * 225)
-    console.log(randomIndex);
+    const randomIndex = Math.floor(Math.random() * grid.value.length)
     if (grid.value[randomIndex].type === '') {
       grid.value[randomIndex].type = 'success'
       count++
@@ -26,15 +23,33 @@ const generatePrizes = () => {
 
 }
 const Mining = useGame()
-const { grid, score, stars, frequency, pickaxe, cd, mapnum } = storeToRefs(Mining)
+const { grid, score, stars, frequency, pickaxe, mapnum } = storeToRefs(Mining)
+// 列
+const cols = ref(15)
+// 行
+const rows = ref(15)
+// 兼顾移动端
+onMounted(() => {
+  if (window.innerWidth < 650) {
+    cols.value = 9
+  }
+  initBoard()
+})
 // 创建矿区-矿石初始化
 const initBoard = () => {
-  if (Mining.grid.length !== 0) return  // 优先按照本地存储的来
+  const totalCells = rows.value * cols.value
+  if (grid.value.length !== 0 && grid.value.length === totalCells) {
+    return
+  } else {
+    grid.value = [] // 尺寸对不上（比如换了设备），清空残局，重新生成适合屏幕的地图
+  }
   frequency.value = 1
+  console.log(cols.value, 'cols');
+  console.log(rows.value, 'rows');
   const tempBoard: Cell[] = []
-  for (let i = 0; i < BOARD_SIZE * BOARD_SIZE; i++) {
-    const row = Math.floor(i / BOARD_SIZE)
-    const col = i % BOARD_SIZE
+  for (let i = 0; i < totalCells; i++) {
+    const row = Math.floor(i / cols.value)
+    const col = i % cols.value
     tempBoard.push({ id: i, row, col, type: '', mined: false, score: Math.floor(Math.random() * 3) + 1, aroundCount: 0 })
   }
   grid.value = tempBoard
@@ -42,15 +57,6 @@ const initBoard = () => {
   generatePrizes()
   console.log(grid.value);
 }
-initBoard()
-const cols = ref(15)
-const rows = ref(15)
-// 兼顾移动端
-onMounted(() => {
-  if (window.innerWidth < 650) {
-    cols.value = 9
-  }
-})
 // 镐头样式
 const pickaxes: PickaxeItem[] = [
   {
@@ -77,14 +83,20 @@ const pickaxes: PickaxeItem[] = [
 // 镐头高亮
 const clickPickaxe = (index: number) => {
   pickaxe.value = index
-  console.log(pickaxe.value);
 }
+const cd = ref<cdType[]>([
+  { time: 0, click: true },
+  { time: 0, click: true },
+  { time: 0, click: true },
+  { time: 0, click: true }
+])
 // 点击触发
 const handleClick = (item: Cell) => {
   if (item.mined) return //矿已被挖开
   if (!cd.value[pickaxe.value].click) return //镐头还在cd
   const row = item.row
   const col = item.col
+  console.log(row, col);
   switch (pickaxe.value) {
     // 普通镐
     case 0:
