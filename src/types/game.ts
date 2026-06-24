@@ -30,4 +30,21 @@ export interface Cell {
 
     /** 挖到该格子可以获得的分数奖励 */
     score: number;
+    /** 当前格子邻居的矿石数量 */
+    aroundCount: number
+}
+export interface PickaxeItem {
+    /** 镐头类型 */
+    name: string
+    /** 镐头描述 */
+    desc: string
+    /** 镐头样式 */
+    icon: string
+}
+
+export interface cdType {
+    /** 镐头的冷却时间 */
+    time: number
+    /** 是否禁用 */
+    click: boolean
 }
