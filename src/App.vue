@@ -1,10 +1,9 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
-import type { cdType, Cell, PickaxeItem } from './types/game';
-// 矿区-装载着255个不确定状态的金矿
-const grid = ref<Cell[]>([])
+import type { Cell, PickaxeItem } from './types/game';
+import { useGame } from './stores/game';
+import { storeToRefs } from 'pinia';
 const BOARD_SIZE = 15; // 一行 15 个格子
-const frequency = ref(0) //地图章节
 
 // 随机分发矿石
 const generatePrizes = () => {
@@ -12,6 +11,7 @@ const generatePrizes = () => {
   while (count < 30) {
     // 随机生成一个 0 到 224 的索引号
     const randomIndex = Math.floor(Math.random() * 225)
+    console.log(randomIndex);
     if (grid.value[randomIndex].type === '') {
       grid.value[randomIndex].type = 'success'
       count++
@@ -25,9 +25,12 @@ const generatePrizes = () => {
   })
 
 }
+const Mining = useGame()
+const { grid, score, stars, frequency, pickaxe, cd, mapnum } = storeToRefs(Mining)
 // 创建矿区-矿石初始化
 const initBoard = () => {
-  frequency.value++
+  if (Mining.grid.length !== 0) return  // 优先按照本地存储的来
+  frequency.value = 1
   const tempBoard: Cell[] = []
   for (let i = 0; i < BOARD_SIZE * BOARD_SIZE; i++) {
     const row = Math.floor(i / BOARD_SIZE)
@@ -48,8 +51,6 @@ onMounted(() => {
     cols.value = 9
   }
 })
-const stars = ref(0) //星星总数
-const score = ref(0) //总分数
 // 镐头样式
 const pickaxes: PickaxeItem[] = [
   {
@@ -74,18 +75,10 @@ const pickaxes: PickaxeItem[] = [
   }
 ]
 // 镐头高亮
-const pickaxe = ref(0)
 const clickPickaxe = (index: number) => {
   pickaxe.value = index
   console.log(pickaxe.value);
 }
-// 镐头冷却时间
-const cd = ref<cdType[]>([
-  { time: 0, click: true },
-  { time: 0, click: true },
-  { time: 0, click: true },
-  { time: 0, click: true }
-])
 // 点击触发
 const handleClick = (item: Cell) => {
   if (item.mined) return //矿已被挖开
@@ -204,7 +197,7 @@ const onFinish = (index: number) => {
   </div>
   <div class="mining_box">
     <div class="title">Vue 挖矿小游戏</div>
-    <div class="statistics"> 当前挖矿分数: {{ score }} | 目前你已挖完矿区0次 </div>
+    <div class="statistics"> 当前挖矿分数: {{ score }} | 目前你已挖完矿区{{ mapnum }}次 </div>
     <div class="card_box">
       <div class="grid_item" v-for="(item) in grid" :key="item.id" @click="handleClick(item)">
         <div :class="['card_bg', 'open']" v-if="item.mined">
@@ -353,6 +346,10 @@ body {
       }
 
       .map1 {
+        background-image: url(./assets/images/map/bg1.png);
+      }
+
+      .map2 {
         background-image: url(./assets/images/map/bg2.png);
       }
     }
