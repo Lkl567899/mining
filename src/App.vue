@@ -42,6 +42,10 @@ const initBoard = () => {
     return
   } else {
     grid.value = [] // 尺寸对不上（比如换了设备），清空残局，重新生成适合屏幕的地图
+    cd.value = [{ time: 0, click: true },
+    { time: 0, click: true },
+    { time: 0, click: true },
+    { time: 0, click: true }]
   }
   frequency.value = 1
   console.log(cols.value, 'cols');
