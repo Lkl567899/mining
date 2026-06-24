@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
-import type { cdType, Cell, PickaxeItem } from './types/game';
+import type { Cell, PickaxeItem } from './types/game';
 import { useGame } from './stores/game';
 import { storeToRefs } from 'pinia';
 // 随机分发矿石
@@ -23,7 +23,7 @@ const generatePrizes = () => {
 
 }
 const Mining = useGame()
-const { grid, score, stars, frequency, pickaxe, mapnum } = storeToRefs(Mining)
+const { grid, score, stars, frequency, pickaxe, mapnum, cd } = storeToRefs(Mining)
 // 列
 const cols = ref(15)
 // 行
@@ -84,12 +84,6 @@ const pickaxes: PickaxeItem[] = [
 const clickPickaxe = (index: number) => {
   pickaxe.value = index
 }
-const cd = ref<cdType[]>([
-  { time: 0, click: true },
-  { time: 0, click: true },
-  { time: 0, click: true },
-  { time: 0, click: true }
-])
 // 点击触发
 const handleClick = (item: Cell) => {
   if (item.mined) return //矿已被挖开
