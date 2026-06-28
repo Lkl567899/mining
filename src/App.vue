@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue';
+import { h, onMounted, ref } from 'vue';
 import type { Cell, PickaxeItem } from './types/game';
 import { useGame } from './stores/game';
 import { storeToRefs } from 'pinia';
@@ -22,8 +22,8 @@ const generatePrizes = () => {
   })
 
 }
-const Mining = useGame()
-const { grid, score, stars, frequency, pickaxe, mapnum, cd } = storeToRefs(Mining)
+const Mining = useGame() // 仓库
+const { grid, score, stars, frequency, pickaxe, mapnum, cd, infiniteBombShow, resetCdShow } = storeToRefs(Mining)
 // 列
 const cols = ref(15)
 // 行
@@ -32,6 +32,8 @@ const rows = ref(15)
 onMounted(() => {
   if (window.innerWidth < 650) {
     cols.value = 9
+    infiniteBombShow.value = false
+    resetCdShow.value = false
   }
   initBoard()
 })
@@ -127,6 +129,8 @@ const handleClick = (item: Cell) => {
   }
   // 镐头冷却
   let timeIncrement
+  // 重置cd开关 所有工具都不进入冷却
+  if (resetCdShow.value) return
   switch (pickaxe.value) {
     case 0:
       timeIncrement = 10 * 60 * 100
@@ -138,6 +142,10 @@ const handleClick = (item: Cell) => {
       timeIncrement = 50 * 60 * 100
       break
     default:
+      // 蹦蹦炸弹cd不进入冷却
+      if (infiniteBombShow.value) {
+        return
+      }
       timeIncrement = 100 * 60 * 100;
   }
   cd.value[pickaxe.value].time = Date.now() + timeIncrement
@@ -184,6 +192,56 @@ const onFinish = (index: number) => {
   cd.value[index].click = true
   cd.value[index].time = 0
 }
+import { SmileOutlined } from '@ant-design/icons-vue';
+import { notification, Button } from 'ant-design-vue';
+import { message } from 'ant-design-vue';
+const [messageApi, contextHolder] = message.useMessage(); //全局提示
+
+// 蹦蹦炸弹无限cd
+const Bomb = () => {
+  infiniteBombShow.value = !infiniteBombShow.value
+  if (infiniteBombShow.value) {
+    messageApi.success({
+      content: () => '感受可莉的愤怒吧😡!',
+      style: {
+        marginTop: '20vh'
+      }
+    })
+    cd.value[3].time = 0 // 保罗炸弹冷却重置
+  }
+
+}
+// 所有工具无限cd
+const resetCd = () => {
+  resetCdShow.value = !resetCdShow.value
+  if (resetCdShow.value) {
+    //重置所有工具的cd
+    messageApi.success({
+      content: () => '所有工具无限cd已开启!',
+      style: {
+        marginTop: '20vh'
+      }
+    })
+    cd.value.forEach(item => item.time = 0)
+  }
+}
+// 作弊弹窗
+const modifier = () => {
+  // 限制弹窗数量
+  notification.config({
+    maxCount: 1
+  })
+  notification.success({
+    message: '修改器',
+    description: () => h('div', { class: 'notify' }, [
+      h(Button, { class: ['notify-btn', infiniteBombShow.value ? 'bomb-active' : ''], size: 'small', danger: true, onClick: Bomb }, () => '无限蹦蹦炸弹'),
+      h(Button, { class: ['notify-btn', 'cd-default', resetCdShow.value ? 'cd-active' : ''], size: 'small', onClick: resetCd }, () => '重置镐头冷却')
+    ]),
+    duration: 3,
+    class: 'notification_'
+  })
+}
+// 弹窗组件
 </script>
 <!-- 
 1. -1 -1
@@ -240,6 +298,10 @@ const onFinish = (index: number) => {
       </div>
     </div>
   </div>
+  <div class="game_modifier" @click="modifier">
+    <SmileOutlined />
+  </div>
+  <context-holder />
 </template>
 
 <style>
@@ -300,7 +362,7 @@ body {
   max-width: 650px;
 
   .title {
-    margin-bottom: 40px;
+    margin: 30px 0;
     font-size: 22px;
     text-align: center;
   }
@@ -423,5 +485,70 @@ body {
 
 .ant-statistic {
   padding-bottom: 0 !important;
+}
+
+/* 游戏修改器 */
+.game_modifier {
+  width: 30px;
+  height: 30px;
+  line-height: 30px;
+  text-align: center;
+  background-color: hsla(0, 0%, 100%, .8);
+  box-shadow: 0 0 5px rgba(0, 0, 0, .3);
+  position: fixed;
+  left: 0%;
+  top: 80px;
+  z-index: 2;
+  border-radius: 0 50% 50% 0;
+  cursor: url(./assets/images/cur/pointer.png), default;
+
+}
+
+.notify {
+  margin-top: 10px;
+}
+
+.notify-btn {
+  margin-right: 10px;
+  font-size: 12px !important;
+}
+
+.notification_ {
+  width: 300px;
+}
+
+@media screen and (max-width:650px) {
+  .notification_ {
+    width: 200px;
+  }
+
+  .notify-btn {
+    margin-top: 10px;
+    font-size: 12px !important;
+  }
+
+}
+
+/* 蹦蹦炸弹的开启样式 */
+.notify-btn.bomb-active {
+  background-color: #c53030 !important;
+  border-color: #c53030 !important;
+  color: #fff !important;
+  box-shadow:
+    0 0 8px rgba(197, 48, 48, .8),
+    inset 0 0 6px rgba(255, 100, 100, .4);
+}
+
+/* 重置cd的开启样式 */
+.notify-btn.cd-default {
+  border-color: #722ed1 !important;
+  color: #722ed1 !important;
+}
+
+.notify-btn.cd-active {
+  background-color: #722ed1 !important;
+  border-color: #722ed1 !important;
+  color: #fff !important;
+  box-shadow: 0 0 8px rgba(114, 46, 209, .7);
 }
 </style>

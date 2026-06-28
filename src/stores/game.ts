@@ -24,8 +24,12 @@ export const useGame = defineStore('mining', () => {
     const mapnum = ref(0)
     // 头像
     const avatar = ref('./assets/images/avatar.png')
+    // 作弊功能 resetCdShow 所有工具无限cd  infiniteBombShow 蹦蹦炸弹无限cd
+    const resetCdShow = ref(false)
+    
+    const infiniteBombShow = ref(false)
 
-    return { cd, stars, score, pickaxe, frequency, grid, mapnum, avatar, }
+    return { cd, stars, score, pickaxe, frequency, grid, mapnum, avatar,resetCdShow, infiniteBombShow }
 }, {
     persist: true //持久化
 })
