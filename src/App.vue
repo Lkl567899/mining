@@ -23,7 +23,7 @@ const generatePrizes = () => {
 
 }
 const Mining = useGame() // 仓库
-const { grid, score, stars, frequency, pickaxe, mapnum, cd, infiniteBombShow, resetCdShow } = storeToRefs(Mining)
+const { grid, score, stars, frequency, pickaxe, mapnum, cd, infiniteBombShow, resetCdShow, everyGrid, avatar } = storeToRefs(Mining)
 // 列
 const cols = ref(15)
 // 行
@@ -40,16 +40,16 @@ onMounted(() => {
 // 创建矿区-矿石初始化
 const initBoard = () => {
   const totalCells = rows.value * cols.value
-  if (grid.value.length !== 0 && grid.value.length === totalCells) {
+  if (grid.value.length !== 0 && grid.value.length === totalCells && !everyGrid.value) {
     return
   } else {
+    console.log('我重生了');
     grid.value = [] // 尺寸对不上（比如换了设备），清空残局，重新生成适合屏幕的地图
     cd.value = [{ time: 0, click: true },
     { time: 0, click: true },
     { time: 0, click: true },
     { time: 0, click: true }]
   }
-  frequency.value = 1
   console.log(cols.value, 'cols');
   console.log(rows.value, 'rows');
   const tempBoard: Cell[] = []
@@ -90,6 +90,22 @@ const pickaxes: PickaxeItem[] = [
 const clickPickaxe = (index: number) => {
   pickaxe.value = index
 }
+// 换地图
+const checkAllCleared = () => {
+  everyGrid.value = grid.value.every(item => item.mined)
+  console.log(everyGrid.value, 'everyGrid');
+  if (frequency.value === 5) {
+    messageApi.success('恭喜你通关喵~')
+    return
+  }
+  if (everyGrid.value) {
+    frequency.value += 1 //换地图
+    initBoard() //重置矿区
+    mapnum.value += 1 // 地图进度
+    messageApi.success(`进入下一关喵~`)
+  }
+}
+
 // 点击触发
 const handleClick = (item: Cell) => {
   if (item.mined) return //矿已被挖开
@@ -127,6 +143,7 @@ const handleClick = (item: Cell) => {
       }
       break
   }
+  checkAllCleared()
   // 镐头冷却
   let timeIncrement
   // 重置cd开关 所有工具都不进入冷却
@@ -241,7 +258,43 @@ const modifier = () => {
     class: 'notification_'
   })
 }
-// 弹窗组件
+
+// 用户弹出框
+const open = ref(false)
+
+// 修改头像
+const handleLocalUpload = (options: any) => {
+  const fileEntity = options.file // 照片实体
+  const reader = new FileReader() // 扫描器
+  reader.onload = (e) => {
+    const imageObj = new Image();
+    imageObj.src = e.target?.result as string
+
+    imageObj.onload = () => {
+      const targetWidth = 100;
+      const scaleFactor = targetWidth / imageObj.width;
+      const targetHeight = imageObj.height * scaleFactor;
+      const invisibleCanvas = document.createElement('canvas');
+      invisibleCanvas.width = targetWidth;
+      invisibleCanvas.height = targetHeight;
+      const ctx = invisibleCanvas.getContext('2d');
+      if (ctx) {
+        ctx.drawImage(imageObj, 0, 0, targetWidth, targetHeight);
+        const base64 = invisibleCanvas.toDataURL('image/jpeg', 0.8)
+        if (base64 && typeof base64 === 'string') {
+          avatar.value = base64
+          message.success('头像修改成功~');
+          options.onSuccess()
+        }
+      }
+    }
+    imageObj.onerror = () => {
+      options.onError();
+    };
+
+  }
+  reader.readAsDataURL(fileEntity)
+}
 </script>
 <!-- 
 1. -1 -1
@@ -259,7 +312,7 @@ const modifier = () => {
   <div class="bg_2" />
   <div class="user">
     <div class="userInfo">
-      <img src="./assets/images/avatar.png" class="avatar" alt="">
+      <img :src="avatar" class="avatar pointer_cursor" alt="" @click="open = !open">
       <div class="stars">我 <span class="star">⭐</span> {{ stars }}</div>
     </div>
   </div>
@@ -277,7 +330,7 @@ const modifier = () => {
             </template>
             <div v-if="item.type === 'error'">{{ item.aroundCount }}</div>
             <div v-else>⭐</div>
-            <img src="./assets/images/avatar.png" alt="" class="default_img">
+            <img :src="avatar" alt="" class="default_img">
           </a-tooltip>
 
         </div>
@@ -302,9 +355,33 @@ const modifier = () => {
     <SmileOutlined />
   </div>
   <context-holder />
+  <a-modal v-model:open="open" title="我的信息" width="400px" :footer="null">
+    <div class="user_box">
+      <div class="avatar_box">
+        <img :src="avatar" alt="" class="user_avatar">
+        <div class="username">我</div>
+      </div>
+      <div class="data_box">
+        <div class="data_item">星星: 0</div>
+        <div class="data_item">等级: 0</div>
+      </div>
+      <div class="btn_box">
+        <a-upload name="avatar" :show-upload-list="false" :customRequest="handleLocalUpload">
+          <a-button type="primary pointer_cursor">修改头像</a-button>
+        </a-upload>
+        <a-button type="primary pointer_cursor" class="import_btn">导入</a-button>
+        <a-button type="primary pointer_cursor" class="export_btn">导出</a-button>
+        <a-button type="primary pointer_cursor" danger>清空</a-button>
+      </div>
+    </div>
+  </a-modal>
 </template>
 
 <style>
+.pointer_cursor {
+  cursor: url(./assets/images/cur/pointer.png), default;
+}
+
 body {
   background-image: url(./assets/images/bg/bg0.png);
   cursor: url(./assets/images/cur/default.png), default;
@@ -423,6 +500,18 @@ body {
 
       .map2 {
         background-image: url(./assets/images/map/bg2.png);
+      }
+
+      .map3 {
+        background-image: url(./assets/images/map/bg3.png);
+      }
+
+      .map4 {
+        background-image: url(./assets/images/map/bg4.png);
+      }
+
+      .map5 {
+        background-image: url(./assets/images/map/bg5.png);
       }
     }
 
@@ -550,5 +639,68 @@ body {
   border-color: #722ed1 !important;
   color: #fff !important;
   box-shadow: 0 0 8px rgba(114, 46, 209, .7);
+}
+
+.user_box {
+  width: 100%;
+  height: 100%;
+
+  .avatar_box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    margin: 20px 0;
+
+    .user_avatar {
+      width: 45px;
+      height: 45px;
+    }
+
+    .username {
+      margin-top: 3px;
+    }
+  }
+}
+
+.data_box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+
+  .data_item {
+    width: 180px;
+    height: 36px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
+
+.btn_box {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 10px 0;
+
+  .import_btn {
+    background-color: #ccc;
+  }
+
+  .import_btn:hover {
+    background-color: #c6c3c3;
+  }
+
+  .export_btn {
+    background-color: #eebc07;
+  }
+
+  .export_btn:hover {
+    background-color: #f3bf04 !important;
+  }
 }
 </style>
