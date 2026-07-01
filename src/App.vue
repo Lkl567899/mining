@@ -93,13 +93,13 @@ const clickPickaxe = (index: number) => {
 // 换地图
 const checkAllCleared = () => {
   everyGrid.value = grid.value.every(item => item.mined)
-  console.log(everyGrid.value, 'everyGrid');
-  if (frequency.value === 5) {
-    messageApi.success('恭喜你通关喵~')
-    return
-  }
   if (everyGrid.value) {
     frequency.value += 1 //换地图
+    if (frequency.value > 5) {
+      messageApi.success('恭喜你通关喵~ 接下来从零开始吧')
+      frequency.value = 1
+      return
+    }
     initBoard() //重置矿区
     mapnum.value += 1 // 地图进度
     messageApi.success(`进入下一关喵~`)
@@ -269,14 +269,14 @@ const handleLocalUpload = (options: any) => {
   reader.onload = (e) => {
     const imageObj = new Image();
     imageObj.src = e.target?.result as string
-
     imageObj.onload = () => {
       const targetWidth = 100;
       const scaleFactor = targetWidth / imageObj.width;
-      const targetHeight = imageObj.height * scaleFactor;
+      const targetHeight = imageObj.height * scaleFactor;;
       const invisibleCanvas = document.createElement('canvas');
       invisibleCanvas.width = targetWidth;
       invisibleCanvas.height = targetHeight;
+
       const ctx = invisibleCanvas.getContext('2d');
       if (ctx) {
         ctx.drawImage(imageObj, 0, 0, targetWidth, targetHeight);
